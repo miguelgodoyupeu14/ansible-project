@@ -1,0 +1,6 @@
+---
+- name: Configuración de tareas programadas en Linux
+  hosts: linux_lab
+  become: yes
+  roles:
+    - jobs_linux

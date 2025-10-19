@@ -1,0 +1,8 @@
+---
+- name: Gestión de usuarios y grupos en Linux
+  hosts: linux_lab
+  become: yes
+  vars_files:
+    - ../group_vars/vault.yml  # Usar Ansible Vault para este archivo
+  roles:
+    - users_linux
