@@ -1,0 +1,22 @@
+packages_common:
+  - vim
+  - git
+  - curl
+  - htop
+  - lsb-release
+timezone: "America/Lima"
+default_scripts_path: "/opt/scripts"
+audit_report_path: "/var/log/audit_ansible"
+ssh_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOA4D82y0PUmBhy8fQoiFjCQLIqPytjS5hfHGDLrpFFk miguel@admin"
+vault_file: vault.yml  # Referencia a variables cifradas
+
+# Configuración Gaming Center
+gaming_enabled: true
+gaming_server_name: "Zentyal Gaming Center"
+gaming_admin_email: "admin@zentyal-gaming.local"
+
+# Configuración adicional para Steam
+steam_auto_update: true
+gaming_backup_enabled: true
+gaming_monitoring_enabled: true

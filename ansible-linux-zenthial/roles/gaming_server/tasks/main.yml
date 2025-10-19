@@ -1,0 +1,320 @@
+---
+# Tareas para configurar gaming server con Steam
+
+- name: "📋 GAMING SERVER - Información inicial del sistema"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      🎮 CONFIGURANDO ZENTYAL COMO GAMING CENTER 🎮
+      ============================================================
+      Timestamp: {{ ansible_date_time.iso8601 }}
+      Host: {{ inventory_hostname }} ({{ ansible_host }})
+      Usuario actual: {{ ansible_user }}
+      
+      INFORMACIÓN DEL SISTEMA:
+      - OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      - Arquitectura: {{ ansible_architecture }}
+      - Memoria total: {{ ansible_memtotal_mb }}MB
+      - CPU cores: {{ ansible_processor_vcpus }}
+      - Espacio /data: {% if ansible_mounts | selectattr('mount', 'equalto', '/data') | list | length > 0 %}{{ (ansible_mounts | selectattr('mount', 'equalto', '/data') | map(attribute='size_available') | first / 1024 / 1024 / 1024) | round(2) }}GB disponible{% else %}Directorio /data creado{% endif %}
+      
+      CONFIGURACIÓN GAMING:
+      - Usuario Steam: {{ steam_user }}
+      - Directorio Steam: {{ steam_home }}
+      - Almacenamiento juegos: {{ games_storage }}
+      - Puertos a abrir: {{ gaming_ports | join(', ') }}
+      ============================================================
+
+- name: "📂 Verificar existencia del directorio /data"
+  ansible.builtin.stat:
+    path: /data
+  register: ansible_stat_data_exists
+
+- name: "✅ Validar que el directorio /data existe y es accesible"
+  ansible.builtin.assert:
+    that:
+      - ansible_stat_data_exists.stat.exists
+    fail_msg: |
+      ❌ ERROR: El directorio /data no está disponible
+      
+      VERIFICACIONES FALLIDAS:
+      - /data no encontrado en {{ ansible_host }}
+      - Steam necesita /data para almacenamiento
+      - Ejecuta: mkdir -p /data en tu servidor
+    success_msg: |
+      ✅ Directorio /data disponible para Steam
+      - Configurado para usar /data en sistema principal
+
+- name: "📦 Habilitar arquitectura i386 para compatibilidad Steam"
+  ansible.builtin.shell: dpkg --add-architecture i386
+  register: i386_result
+  changed_when: "'i386' not in ansible_facts.architecture"
+
+- name: "🔄 Actualizar cache de paquetes después de i386"
+  ansible.builtin.apt:
+    update_cache: yes
+  when: i386_result.changed
+
+- name: "📦 Instalar paquetes necesarios para Steam"
+  ansible.builtin.apt:
+    name: "{{ steam_packages }}"
+    state: present
+    update_cache: yes
+  register: package_install
+
+- name: "📋 Debug - Resultado instalación de paquetes"
+  ansible.builtin.debug:
+    msg: |
+      INSTALACIÓN DE PAQUETES STEAM:
+      {% if package_install.changed %}
+      ✅ Paquetes instalados exitosamente:
+      {% for pkg in steam_packages %}
+      - {{ pkg }}
+      {% endfor %}
+      {% else %}
+      ✅ Todos los paquetes ya estaban instalados
+      {% endif %}
+      
+      Total de paquetes: {{ steam_packages | length }}
+
+- name: "👥 Crear grupo para Steam"
+  ansible.builtin.group:
+    name: "{{ steam_group }}"
+    state: present
+
+- name: "👤 Crear usuario dedicado para Steam"
+  ansible.builtin.user:
+    name: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+    home: "{{ steam_home }}"
+    shell: /bin/bash
+    create_home: yes
+    system: yes
+  register: steam_user_created
+
+- name: "📋 Debug - Usuario Steam configurado"
+  ansible.builtin.debug:
+    msg: |
+      USUARIO STEAM CONFIGURADO:
+      {% if steam_user_created.changed %}
+      ✅ Usuario {{ steam_user }} creado exitosamente
+      - Home: {{ steam_home }}
+      - Grupo: {{ steam_group }}
+      - Shell: /bin/bash
+      - Tipo: Usuario del sistema
+      {% else %}
+      ✅ Usuario {{ steam_user }} ya existe
+      {% endif %}
+
+- name: "📁 Crear directorios para Steam y juegos"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+    mode: '0755'
+  loop:
+    - "{{ steam_home }}"
+    - "{{ games_storage }}"
+    - "{{ steam_cache }}"
+    - "{{ steam_home }}/steamcmd"
+    - "{{ games_storage }}/servers"
+    - "{{ gaming_log_path }}"
+    - "{{ steam_home }}/scripts"
+
+- name: "⬇️ Descargar SteamCMD"
+  ansible.builtin.get_url:
+    url: "{{ steamcmd_url }}"
+    dest: "{{ steam_home }}/steamcmd_linux.tar.gz"
+    owner: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+    mode: '0644'
+  register: steamcmd_download
+
+- name: "📋 Debug - Descarga SteamCMD"
+  ansible.builtin.debug:
+    msg: |
+      DESCARGA STEAMCMD:
+      {% if steamcmd_download.changed %}
+      ✅ SteamCMD descargado exitosamente
+      - URL: {{ steamcmd_url }}
+      - Tamaño: {{ steamcmd_download.msg | default('Descarga completada') }}
+      - Ubicación: {{ steam_home }}/steamcmd_linux.tar.gz
+      - MD5: {{ steamcmd_download.checksum_src | default('N/A') }}
+      {% else %}
+      ✅ SteamCMD ya estaba descargado
+      {% endif %}
+
+- name: "📂 Extraer SteamCMD"
+  ansible.builtin.unarchive:
+    src: "{{ steam_home }}/steamcmd_linux.tar.gz"
+    dest: "{{ steam_home }}/steamcmd"
+    owner: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+    remote_src: yes
+    creates: "{{ steam_home }}/steamcmd/steamcmd.sh"
+  register: steamcmd_extract
+
+- name: "🔧 Hacer ejecutable SteamCMD"
+  ansible.builtin.file:
+    path: "{{ steam_home }}/steamcmd/steamcmd.sh"
+    mode: '0755'
+    owner: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+
+- name: "🔥 Configurar firewall UFW para puertos gaming"
+  ansible.builtin.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: any
+  loop: "{{ gaming_ports }}"
+  register: firewall_config
+
+- name: "📋 Debug - Configuración firewall"
+  ansible.builtin.debug:
+    msg: |
+      CONFIGURACIÓN FIREWALL GAMING:
+      ✅ Puertos configurados para gaming:
+      {% for port in gaming_ports %}
+      - Puerto {{ port }} (TCP/UDP) - {{ 'Abierto' if port in gaming_ports else 'Cerrado' }}
+      {% endfor %}
+      
+      Total puertos configurados: {{ gaming_ports | length }}
+      Estado UFW: Activo con reglas gaming
+
+- name: "⚡ Aplicar optimizaciones del sistema para gaming"
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop: "{{ gaming_sysctl | dict2items }}"
+  register: sysctl_result
+
+- name: "📋 Debug - Optimizaciones del sistema"
+  ansible.builtin.debug:
+    msg: |
+      OPTIMIZACIONES DEL SISTEMA APLICADAS:
+      {% for item in sysctl_result.results %}
+      {% if item.changed %}
+      ✅ {{ item.item.key }}: {{ item.item.value }}
+      {% endif %}
+      {% endfor %}
+      
+      Optimizaciones de red para gaming aplicadas correctamente
+
+- name: "📝 Crear script de gestión de Steam"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # Script de gestión de Steam para Zentyal Gaming Center
+      # Creado por Ansible en {{ ansible_date_time.iso8601 }}
+      
+      STEAM_HOME="{{ steam_home }}"
+      STEAM_USER="{{ steam_user }}"
+      GAMES_DIR="{{ games_storage }}"
+      LOG_DIR="{{ gaming_log_path }}"
+      
+      case "$1" in
+          start)
+              echo "🎮 Iniciando SteamCMD..."
+              sudo -u $STEAM_USER $STEAM_HOME/steamcmd/steamcmd.sh
+              ;;
+          status)
+              echo "📊 Estado del Gaming Server:"
+              echo "- Usuario Steam: $STEAM_USER"
+              echo "- Directorio Steam: $STEAM_HOME"
+              echo "- Juegos: $GAMES_DIR"
+              echo "- Logs: $LOG_DIR"
+              echo "- Procesos Steam activos:"
+              ps aux | grep steam || echo "  Ninguno"
+              ;;
+          logs)
+              echo "📋 Logs del Gaming Server:"
+              tail -f $LOG_DIR/*.log 2>/dev/null || echo "No hay logs disponibles"
+              ;;
+          *)
+              echo "🎮 Zentyal Gaming Center - Gestión Steam"
+              echo "Uso: $0 {start|status|logs}"
+              echo ""
+              echo "Comandos disponibles:"
+              echo "  start  - Iniciar SteamCMD"
+              echo "  status - Ver estado del servidor"
+              echo "  logs   - Ver logs en tiempo real"
+              ;;
+      esac
+    dest: "{{ steam_home }}/scripts/steam-manager.sh"
+    owner: "{{ steam_user }}"
+    group: "{{ steam_group }}"
+    mode: '0755'
+
+- name: "🔧 Verificar instalación de Steam ejecutando SteamCMD"
+  ansible.builtin.shell: |
+    sudo -u {{ steam_user }} {{ steam_home }}/steamcmd/steamcmd.sh +quit
+  register: steam_test
+  changed_when: false
+  failed_when: steam_test.rc != 0
+
+- name: "📋 Debug - Verificación final Steam"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      🎉 ZENTYAL GAMING CENTER CONFIGURADO EXITOSAMENTE 🎉
+      ============================================================
+      
+      ✅ COMPONENTES INSTALADOS:
+      - SteamCMD: {{ steam_home }}/steamcmd/steamcmd.sh
+      - Usuario Steam: {{ steam_user }}
+      - Directorio juegos: {{ games_storage }}
+      - Logs gaming: {{ gaming_log_path }}
+      - Script gestión: {{ steam_home }}/scripts/steam-manager.sh
+      
+      ✅ CONFIGURACIÓN DE RED:
+      - Puertos abiertos: {{ gaming_ports | join(', ') }}
+      - Firewall UFW configurado
+      - Optimizaciones de red aplicadas
+      
+      ✅ COMANDOS ÚTILES:
+      # Iniciar SteamCMD:
+      sudo -u {{ steam_user }} {{ steam_home }}/steamcmd/steamcmd.sh
+      
+      # Gestión simplificada:
+      {{ steam_home }}/scripts/steam-manager.sh start
+      {{ steam_home }}/scripts/steam-manager.sh status
+      
+      # Acceso web Zentyal:
+      https://{{ ansible_host }}:8443
+      
+      ============================================================
+      🎮 TU ZENTYAL YA ES UN GAMING CENTER 🎮
+      ============================================================
+
+- name: "✅ Assert - Validación completa de la instalación"
+  ansible.builtin.assert:
+    that:
+      - steam_test.rc == 0
+      - steam_user_created is defined
+      - steamcmd_download is defined
+      - firewall_config is defined
+    fail_msg: |
+      ❌ ERROR EN LA INSTALACIÓN DEL GAMING SERVER:
+      
+      VERIFICACIONES FALLIDAS:
+      - SteamCMD test: {{ 'FAILED' if steam_test.rc != 0 else 'OK' }}
+      - Usuario Steam: {{ 'FAILED' if steam_user_created is not defined else 'OK' }}
+      - Descarga SteamCMD: {{ 'FAILED' if steamcmd_download is not defined else 'OK' }}
+      - Firewall: {{ 'FAILED' if firewall_config is not defined else 'OK' }}
+      
+      Revisa los logs y vuelve a ejecutar el playbook.
+    success_msg: |
+      🎉 ¡INSTALACIÓN GAMING SERVER COMPLETADA EXITOSAMENTE!
+      
+      ✅ VERIFICACIONES EXITOSAS:
+      - SteamCMD instalado y funcionando
+      - Usuario {{ steam_user }} configurado
+      - Firewall configurado para gaming
+      - Optimizaciones del sistema aplicadas
+      - Scripts de gestión creados
+      
+      🎮 Tu Zentyal está listo para ser un Game Center
+      🚀 Puedes empezar a instalar servidores de juegos

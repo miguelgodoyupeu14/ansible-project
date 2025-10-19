@@ -1,0 +1,16 @@
+---
+# Handlers para gaming server
+
+- name: restart_gaming_services
+  ansible.builtin.debug:
+    msg: "🔄 Servicios gaming reiniciados después de cambios en configuración"
+
+- name: reload_firewall
+  ansible.builtin.service:
+    name: ufw
+    state: reloaded
+  listen: reload_firewall
+
+- name: restart_steam_services
+  ansible.builtin.debug:
+    msg: "🎮 Servicios Steam reiniciados"

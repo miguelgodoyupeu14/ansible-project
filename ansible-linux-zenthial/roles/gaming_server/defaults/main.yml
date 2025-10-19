@@ -1,0 +1,52 @@
+---
+# Configuración por defecto para gaming server
+
+# Usuario y directorios Steam
+steam_user: "steamuser"
+steam_group: "steam"
+steam_home: "/data/steam"
+games_storage: "/data/games"
+steam_cache: "/data/steam/.cache"
+
+# Paquetes necesarios para Steam
+steam_packages:
+  - wget
+  - curl
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - lib32gcc-s1
+  - lib32stdc++6
+  - libc6-i386
+  - libcurl4-gnutls-dev
+  - ufw
+  - htop
+  - screen
+  - tmux
+
+# Puertos para gaming
+gaming_ports:
+  - "27015"   # Steam game server
+  - "27016"   # Steam RCON
+  - "7777"    # Juegos generales UDP
+  - "7778"    # Query port
+  - "25565"   # Minecraft
+  - "19132"   # Minecraft Bedrock
+  - "2456"    # Valheim
+  - "2457"    # Valheim
+  - "2458"    # Valheim
+
+# Variables para optimización del sistema
+gaming_sysctl:
+  net.core.rmem_default: 262144
+  net.core.rmem_max: 16777216
+  net.core.wmem_default: 262144
+  net.core.wmem_max: 16777216
+  net.core.netdev_max_backlog: 5000
+  net.ipv4.tcp_window_scaling: 1
+
+# Configuración de Steam
+steamcmd_url: "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
+gaming_log_path: "/var/log/gaming"
