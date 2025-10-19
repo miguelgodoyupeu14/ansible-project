@@ -1,0 +1,31 @@
+---
+# Auditoría y recolección de información
+
+- name: Recolectar estado de servicios
+  ansible.windows.win_shell: 'Get-Service | Out-File C:\AnsibleReports\{{ inventory_hostname }}\services.txt'
+
+- name: Recolectar procesos activos
+  ansible.windows.win_shell: 'Get-Process | Out-File C:\AnsibleReports\{{ inventory_hostname }}\processes.txt'
+
+- name: Recolectar últimos eventos del sistema
+  ansible.windows.win_shell: 'Get-EventLog -LogName System -Newest 200 | Out-File C:\AnsibleReports\{{ inventory_hostname }}\eventlog.txt'
+
+- name: Copiar reportes al nodo de control (Linux)
+  fetch:
+    src: 'C:\AnsibleReports\{{ inventory_hostname }}\services.txt'
+    dest: './reports/{{ inventory_hostname }}/services.txt'
+    flat: yes
+
+- name: Copiar reportes adicionales
+  fetch:
+    src: 'C:\AnsibleReports\{{ inventory_hostname }}\processes.txt'
+    dest: './reports/{{ inventory_hostname }}/processes.txt'
+    flat: yes
+
+- name: Copiar eventlog
+  fetch:
+    src: 'C:\AnsibleReports\{{ inventory_hostname }}\eventlog.txt'
+    dest: './reports/{{ inventory_hostname }}/eventlog.txt'
+    flat: yes
+
+# Alternativamente, puedes usar win_copy para enviar archivos a una ruta compartida en red.

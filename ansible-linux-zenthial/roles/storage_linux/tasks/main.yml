@@ -1,0 +1,40 @@
+---
+# Tareas de almacenamiento
+
+- name: Detectar discos y particiones
+  ansible.builtin.setup:
+    gather_subset:
+      - hardware
+      - network
+      - virtual
+  register: hw_facts
+
+- name: Mostrar información de discos
+  debug:
+    var: hw_facts
+
+- name: Crear filesystem en partición sin formato (¡PRUEBA SOLO EN VM!)
+  ansible.builtin.filesystem:
+    dev: "{{ mount_points[0].device }}"
+    fstype: "{{ mount_points[0].fstype }}"
+  when: mount_points[0].device is defined
+  # ¡ADVERTENCIA! Esta tarea borra datos. Usar solo en pruebas.
+
+- name: Montar en /data y asegurar persistencia
+  ansible.builtin.mount:
+    path: "{{ mount_points[0].path }}"
+    src: "{{ mount_points[0].device }}"
+    fstype: "{{ mount_points[0].fstype }}"
+    state: mounted
+
+- name: Configurar cuotas de disco
+  ansible.builtin.package:
+    name: quota
+    state: present
+
+- name: Habilitar cuotas en /etc/fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "{{ mount_points[0].device }}"
+    line: "{{ mount_points[0].device }} {{ mount_points[0].path }} {{ mount_points[0].fstype }} defaults,usrquota,grpquota 0 2"
+    state: present

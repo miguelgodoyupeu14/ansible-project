@@ -1,0 +1,6 @@
+---
+- name: Configuración base de Windows Server 2022
+  hosts: windows_lab
+  gather_facts: no
+  roles:
+    - base_windows

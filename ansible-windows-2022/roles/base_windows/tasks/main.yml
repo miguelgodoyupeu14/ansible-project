@@ -1,0 +1,43 @@
+---
+# Tareas base para preparar Windows Server 2022
+
+- name: Instalar actualizaciones críticas de Windows
+  ansible.windows.win_updates:
+    category_names: ['CriticalUpdates']
+    state: installed
+  register: update_result
+
+- name: Instalar el rol IIS (Web-Server) si se requiere
+  ansible.windows.win_feature:
+    name: Web-Server
+    state: present
+  register: iis_result
+
+- name: Crear carpeta C:\Scripts
+  ansible.windows.win_file:
+    path: '{{ default_scripts_path }}'
+    state: directory
+
+- name: Asignar permisos a C:\Scripts
+  ansible.windows.win_acl:
+    path: '{{ default_scripts_path }}'
+    user: '{{ win_admin_user }}'
+    rights: FullControl
+    type: allow
+
+- name: Copiar utilidades y scripts a C:\Scripts
+  ansible.windows.win_copy:
+    src: backup.ps1
+    dest: '{{ default_scripts_path }}\backup.ps1'
+  with_items:
+    - backup.ps1
+    - cleanup.ps1
+
+- name: Configurar zona horaria
+  ansible.windows.win_timezone:
+    timezone: "South America Standard Time"  # Cambia según tu región
+
+- name: Cambiar nombre de host si es necesario
+  ansible.windows.win_hostname:
+    name: "{{ inventory_hostname }}"
+  when: inventory_hostname is defined

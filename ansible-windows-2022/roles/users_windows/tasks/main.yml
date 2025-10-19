@@ -1,0 +1,21 @@
+---
+# Tareas para usuarios locales
+
+- name: Crear usuario local backupuser
+  ansible.windows.win_user:
+    name: backupuser
+    password: "{{ backup_user_password }}"
+    state: present
+    groups:
+      - Backup Operators
+
+- name: Añadir backupuser a Administradores
+  ansible.windows.win_group_membership:
+    name: Administradores
+    members:
+      - backupuser
+    state: present
+
+- name: Configurar políticas de contraseña básicas
+  ansible.windows.win_shell: 'net accounts /minpwlen:8 /maxpwage:90 /uniquepw:5'
+  register: pw_policy

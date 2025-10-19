@@ -1,0 +1,30 @@
+---
+# Tareas programadas
+
+- name: Copiar scripts a /opt/scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ default_scripts_path }}/{{ item }}"
+    mode: '0755'
+  loop:
+    - backup.sh
+    - cleanup.sh
+
+- name: Configurar tarea diaria de backup con cron
+  ansible.builtin.cron:
+    name: "Backup diario"
+    user: root
+    minute: "0"
+    hour: "2"
+    job: "{{ default_scripts_path }}/backup.sh"
+    state: present
+
+- name: Configurar tarea semanal de limpieza con cron
+  ansible.builtin.cron:
+    name: "Limpieza semanal"
+    user: root
+    minute: "0"
+    hour: "3"
+    weekday: "0"
+    job: "{{ default_scripts_path }}/cleanup.sh"
+    state: present

@@ -1,0 +1,32 @@
+---
+# Tareas de almacenamiento
+
+- name: Obtener información de discos y volúmenes
+  ansible.windows.win_disk_facts:
+  register: disk_info
+
+- name: Mostrar información de discos
+  debug:
+    var: disk_info
+
+- name: Formatear disco nuevo y crear volumen (¡PRUEBA SOLO EN ENTORNOS DE TEST!)
+  ansible.windows.win_disk:
+    disk_number: 1
+    partition_number: 1
+    fs_type: NTFS
+    drive_letter: D
+    state: present
+  when: disk_info.disks | length > 1
+  # ¡ADVERTENCIA! Esta tarea borra datos. Usar solo en pruebas.
+
+- name: Crear carpeta D:\data
+  ansible.windows.win_file:
+    path: 'D:\data'
+    state: directory
+
+- name: Asignar permisos NTFS a D:\data
+  ansible.windows.win_acl:
+    path: 'D:\data'
+    user: '{{ win_admin_user }}'
+    rights: FullControl
+    type: allow

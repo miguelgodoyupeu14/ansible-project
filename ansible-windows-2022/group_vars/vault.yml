@@ -1,0 +1,5 @@
+# Este archivo debe protegerse con Ansible Vault.
+# Ejemplo de uso: ansible-vault encrypt group_vars/vault.yml
+
+win_admin_password: "CAMBIAR_POR_PASSWORD_SEGURA"
+backup_user_password: "CAMBIAR_POR_PASSWORD_SEGURA"

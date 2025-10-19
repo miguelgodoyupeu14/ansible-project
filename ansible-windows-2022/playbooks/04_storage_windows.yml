@@ -1,0 +1,6 @@
+---
+- name: Configuración de almacenamiento en Windows Server 2022
+  hosts: windows_lab
+  gather_facts: no
+  roles:
+    - storage_windows

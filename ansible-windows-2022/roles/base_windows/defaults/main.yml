@@ -1,0 +1,4 @@
+---
+# Valores por defecto para base_windows
+default_scripts_path: 'C:\Scripts'
+win_admin_user: Administrador

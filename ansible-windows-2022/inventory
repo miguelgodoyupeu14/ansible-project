@@ -1,0 +1,2 @@
+[windows_lab]
+win2022-1 ansible_host=192.0.2.20 ansible_user=Administrador ansible_password='CAMBIAR_PWD' ansible_connection=winrm ansible_winrm_transport=ntlm ansible_winrm_server_cert_validation=ignore

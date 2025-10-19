@@ -1,0 +1,25 @@
+---
+# Auditoría y recolección de información
+
+- name: Recolectar uso de disco
+  ansible.builtin.shell: "df -h > {{ audit_report_path }}/df.txt"
+
+- name: Recolectar información de bloques
+  ansible.builtin.shell: "lsblk > {{ audit_report_path }}/lsblk.txt"
+
+- name: Recolectar memoria libre
+  ansible.builtin.shell: "free -m > {{ audit_report_path }}/free.txt"
+
+- name: Recolectar servicios fallidos
+  ansible.builtin.shell: "systemctl list-units --type=service --state=failed > {{ audit_report_path }}/failed_services.txt"
+
+- name: Recolectar últimos accesos
+  ansible.builtin.shell: "last -n 20 > {{ audit_report_path }}/last.txt"
+
+- name: Copiar reportes al nodo de control
+  fetch:
+    src: "{{ audit_report_path }}/df.txt"
+    dest: "./reports/{{ inventory_hostname }}/df.txt"
+    flat: yes
+
+# Puedes agregar más tareas para otros reportes y usar plantillas para generar README/markdown combinando facts y outputs.

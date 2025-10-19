@@ -1,0 +1,30 @@
+---
+# Tareas para servicios críticos
+
+- name: Habilitar y arrancar servicio de hora (w32time)
+  ansible.windows.win_service:
+    name: w32time
+    start_mode: auto
+    state: started
+
+- name: Habilitar y arrancar WinRM
+  ansible.windows.win_service:
+    name: WinRM
+    start_mode: auto
+    state: started
+
+- name: Comprobar estado de procesos críticos
+  ansible.windows.win_shell: 'Get-Process | Where-Object {$_.Name -eq "svchost"}'
+  register: process_status
+
+- name: Guardar salida de procesos críticos
+  ansible.windows.win_copy:
+    content: "{{ process_status.stdout }}"
+    dest: "C:\\AnsibleReports\\{{ inventory_hostname }}\\process_status.txt"
+
+# Handler para reiniciar servicios si cambian archivos de configuración
+- name: Reiniciar servicio WinRM
+  ansible.windows.win_service:
+    name: WinRM
+    state: restarted
+  listen: restart_winrm

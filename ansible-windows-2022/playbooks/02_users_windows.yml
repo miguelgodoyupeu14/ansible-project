@@ -1,0 +1,8 @@
+---
+- name: Gestión de usuarios locales en Windows Server 2022
+  hosts: windows_lab
+  gather_facts: no
+  vars_files:
+    - ../group_vars/vault.yml  # Usar Ansible Vault para este archivo
+  roles:
+    - users_windows

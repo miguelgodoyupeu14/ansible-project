@@ -1,0 +1,46 @@
+---
+# Tareas para servicios críticos
+
+- name: Asegurar que cron esté activo
+  ansible.builtin.service:
+    name: cron
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Asegurar que crond esté activo (RHEL/CentOS)
+  ansible.builtin.service:
+    name: crond
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Asegurar que ntp esté activo
+  ansible.builtin.service:
+    name: ntp
+    state: started
+    enabled: yes
+  when: "'ntp' in ansible_facts.services"
+
+- name: Asegurar que chrony esté activo
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: yes
+  when: "'chronyd' in ansible_facts.services"
+
+- name: Comprobar procesos críticos
+  ansible.builtin.shell: "ps aux | grep -E 'sshd|cron|ntp|chrony'"
+  register: process_status
+
+- name: Guardar salida de procesos críticos
+  ansible.builtin.copy:
+    content: "{{ process_status.stdout }}"
+    dest: "{{ audit_report_path }}/process_status.txt"
+
+# Handler para reiniciar servicios si cambian archivos de configuración
+- name: Reiniciar cron
+  ansible.builtin.service:
+    name: cron
+    state: restarted
+  listen: restart_cron
