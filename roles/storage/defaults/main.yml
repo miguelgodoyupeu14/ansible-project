@@ -1,0 +1,12 @@
+---
+# Defaults para storage
+
+# Puntos de montaje por defecto
+mount_points:
+  - device: "/dev/sdb1"
+    path: "/data"
+    fstype: "ext4"
+
+# Configuración de almacenamiento Windows
+windows_data_drive: "D:"
+windows_data_path: "D:\\data"

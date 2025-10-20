@@ -1,6 +1,0 @@
----
-- name: Configuración de tareas programadas en Windows Server 2022
-  hosts: windows_lab
-  gather_facts: no
-  roles:
-    - jobs_windows

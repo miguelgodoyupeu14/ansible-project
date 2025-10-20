@@ -1,0 +1,14 @@
+---
+# Variables para todos los hosts
+
+# Configuración de zona horaria
+timezone: "America/Lima"
+
+# Configuración SSH
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+# Usuario administrador común
+admin_user: "miguelgod"
+
+# Directorio de scripts común
+default_scripts_path: "/opt/scripts"

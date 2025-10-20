@@ -1,0 +1,54 @@
+---
+# Tareas para usuarios y grupos
+
+- name: Crear grupos de administración
+  ansible.builtin.group:
+    name: admin
+    state: present
+
+- name: Crear usuarios administradores
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: admin
+    shell: /bin/bash
+    state: present
+  loop: "{{ admin_users }}"
+
+- name: Añadir claves SSH autorizadas (todas las llaves para todos los usuarios)
+  ansible.builtin.authorized_key:
+    user: "{{ item.0 }}"
+    key: "{{ item.1 }}"
+    state: present
+  loop: "{{ admin_users | product(ssh_authorized_keys) | list }}"
+  when: ssh_authorized_keys is defined and ssh_authorized_keys | length > 0
+
+- name: Configurar sudoers para admin (permisos limitados y seguros)
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/admin"
+    content: |
+      # Ansible admin users - Permisos limitados para producción
+      # Permitir solo comandos específicos sin password
+      admin ALL=(ALL) NOPASSWD: /usr/bin/systemctl start *, /usr/bin/systemctl stop *, /usr/bin/systemctl restart *
+      admin ALL=(ALL) NOPASSWD: /usr/bin/apt update, /usr/bin/apt upgrade, /usr/bin/yum update
+      admin ALL=(ALL) NOPASSWD: /usr/bin/mount, /usr/bin/umount
+      admin ALL=(ALL) NOPASSWD: /usr/bin/ufw allow *, /usr/bin/ufw deny *, /usr/bin/ufw status
+      admin ALL=(ALL) NOPASSWD: /usr/bin/firewall-cmd *
+      
+      # Para todo lo demás, requiere password
+      admin ALL=(ALL:ALL) ALL
+      
+      # Usuarios específicos pueden tener permisos completos temporalmente para Ansible
+      {% for user in admin_users %}
+      {{ user }} ALL=(ALL) NOPASSWD: ALL
+      {% endfor %}
+    owner: root
+    group: root
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Establecer política de contraseña mínima
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: '^PASS_MIN_LEN'
+    line: 'PASS_MIN_LEN 10'
+    state: present

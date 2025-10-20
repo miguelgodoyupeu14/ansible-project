@@ -1,0 +1,11 @@
+---
+# Tareas principales del rol services
+# Este archivo incluye las tareas específicas según la plataforma
+
+- name: Incluir tareas de servicios para Linux
+  ansible.builtin.include_tasks: linux/main.yml
+  when: ansible_facts['os_family'] in ['Debian', 'RedHat']
+
+- name: Incluir tareas de servicios para Windows
+  ansible.builtin.include_tasks: windows/main.yml
+  when: ansible_facts['os_family'] == 'Windows'

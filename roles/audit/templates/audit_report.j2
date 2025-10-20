@@ -1,0 +1,46 @@
+================================================================================
+REPORTE DE AUDITORÍA DEL SISTEMA
+================================================================================
+Host: {{ hostname }}
+Fecha: {{ report_date }}
+Usuario Ansible: {{ ansible_user }}
+IP: {{ ansible_default_ipv4.address | default('N/A') }}
+
+INFORMACIÓN DEL SISTEMA:
+- OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+- Kernel: {{ ansible_kernel }}
+- Arquitectura: {{ ansible_architecture }}
+- Uptime: {{ ansible_uptime_seconds }} segundos
+- Memoria total: {{ ansible_memtotal_mb }}MB
+
+INFORMACIÓN DE RED:
+- Hostname: {{ ansible_hostname }}
+- FQDN: {{ ansible_fqdn }}
+- Interfaces: {% for interface in ansible_interfaces %}{{ interface }} {% endfor %}
+
+USO DE DISCO:
+{{ disk_usage_content }}
+
+INFORMACIÓN DE MEMORIA:
+{{ memory_content }}
+
+DISPOSITIVOS DE BLOQUE:
+{{ block_content }}
+
+SERVICIOS ACTIVOS:
+{% for service_name, service_info in ansible_facts.services.items() %}
+{% if service_info.state == 'running' %}
+- {{ service_name }}: {{ service_info.state }}
+{% endif %}
+{% endfor %}
+
+SERVICIOS FALLIDOS:
+{% for service_name, service_info in ansible_facts.services.items() %}
+{% if service_info.state == 'failed' %}
+- {{ service_name }}: {{ service_info.state }}
+{% endif %}
+{% endfor %}
+
+================================================================================
+Reporte generado por Ansible - {{ report_date }}
+================================================================================

@@ -1,0 +1,87 @@
+---
+# Tareas base para preparar el servidor Linux
+
+- name: Actualizar cache de paquetes (Debian/Ubuntu)
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Actualizar cache de paquetes (RHEL/CentOS)
+  ansible.builtin.yum:
+    update_cache: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Instalar paquetes esenciales
+  ansible.builtin.package:
+    name: "{{ packages_common }}"
+    state: present
+
+- name: Configurar zona horaria
+  ansible.builtin.timezone:
+    name: "{{ timezone }}"
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Configurar zona horaria (RHEL/CentOS)
+  ansible.builtin.command: "timedatectl set-timezone {{ timezone }}"
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Crear carpeta de scripts
+  ansible.builtin.file:
+    path: "{{ default_scripts_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Asegurar que sshd esté instalado y habilitado
+  ansible.builtin.service:
+    name: ssh
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Asegurar que sshd esté instalado y habilitado (RHEL/CentOS)
+  ansible.builtin.service:
+    name: sshd
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Configurar firewall básico con UFW (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Habilitar UFW (Debian/Ubuntu)
+  community.general.ufw:
+    state: enabled
+    policy: deny
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Permitir SSH en UFW
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+  when: ansible_facts['os_family'] == "Debian"
+
+- name: Configurar firewall básico con firewalld (RHEL/CentOS)
+  ansible.builtin.yum:
+    name: firewalld
+    state: present
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Iniciar y habilitar firewalld (RHEL/CentOS)
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: yes
+  when: ansible_facts['os_family'] == "RedHat"
+
+- name: Permitir SSH en firewalld
+  ansible.builtin.firewalld:
+    service: ssh
+    permanent: yes
+    state: enabled
+    immediate: yes
+  when: ansible_facts['os_family'] == "RedHat"

@@ -1,0 +1,21 @@
+---
+# Tareas para configurar gaming server en Windows
+
+- name: "🎮 GAMING SERVER - Windows Gaming Configuration"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      🎮 CONFIGURANDO WINDOWS COMO GAMING CENTER 🎮
+      ============================================================
+      Host: {{ inventory_hostname }}
+      OS: Windows Server
+      
+      TODO: Implementar configuración de gaming para Windows
+      - Steam installation
+      - Game server setup
+      - Firewall configuration
+      ============================================================
+
+- name: "📝 Placeholder para configuración Windows Gaming"
+  ansible.builtin.debug:
+    msg: "Configuración de Windows gaming pendiente de implementar"

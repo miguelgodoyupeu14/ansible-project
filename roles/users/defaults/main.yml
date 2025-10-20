@@ -1,0 +1,12 @@
+---
+# Defaults para usuarios
+
+# Usuarios administradores por defecto
+admin_users:
+  - miguelgod
+
+# Configuración de contraseñas (desde vault)
+backup_user_password: "{{ vault_backup_user_password | default('CHANGE_ME_VAULT_NEEDED') }}"
+
+# Configuración SSH
+ssh_authorized_keys: []

@@ -1,0 +1,122 @@
+---
+# Auditoría y recolección de información - Versión segura e idempotente
+
+- name: Crear directorio de reportes de auditoría
+  ansible.builtin.file:
+    path: "{{ audit_report_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Recolectar información del sistema usando setup
+  ansible.builtin.setup:
+    gather_subset: 
+      - hardware
+      - network
+      - virtual
+  register: system_facts
+
+- name: Recolectar uso de disco
+  ansible.builtin.command: df -h
+  register: disk_usage
+  changed_when: false
+
+- name: Guardar uso de disco
+  ansible.builtin.copy:
+    content: "{{ disk_usage.stdout }}"
+    dest: "{{ audit_report_path }}/df.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Recolectar información de bloques
+  ansible.builtin.command: lsblk
+  register: block_info
+  changed_when: false
+
+- name: Guardar información de bloques
+  ansible.builtin.copy:
+    content: "{{ block_info.stdout }}"
+    dest: "{{ audit_report_path }}/lsblk.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Recolectar memoria libre
+  ansible.builtin.command: free -m
+  register: memory_info
+  changed_when: false
+
+- name: Guardar memoria libre
+  ansible.builtin.copy:
+    content: "{{ memory_info.stdout }}"
+    dest: "{{ audit_report_path }}/free.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Recolectar servicios fallidos
+  ansible.builtin.systemd:
+    name: "*"
+  register: all_services
+  failed_when: false
+
+- name: Obtener servicios fallidos usando service_facts
+  ansible.builtin.service_facts:
+
+- name: Crear reporte de servicios fallidos
+  ansible.builtin.copy:
+    content: |
+      Servicios fallidos en {{ inventory_hostname }}:
+      Fecha: {{ ansible_date_time.iso8601 }}
+      
+      {% for service_name, service_info in ansible_facts.services.items() %}
+      {% if service_info.state == 'failed' %}
+      - {{ service_name }}: {{ service_info.state }} ({{ service_info.status | default('N/A') }})
+      {% endif %}
+      {% endfor %}
+    dest: "{{ audit_report_path }}/failed_services.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Recolectar últimos accesos
+  ansible.builtin.command: last -n 20
+  register: last_logins
+  changed_when: false
+
+- name: Guardar últimos accesos
+  ansible.builtin.copy:
+    content: "{{ last_logins.stdout }}"
+    dest: "{{ audit_report_path }}/last.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Crear reporte consolidado
+  ansible.builtin.template:
+    src: audit_report.j2
+    dest: "{{ audit_report_path }}/system_audit_{{ ansible_date_time.date }}.txt"
+    owner: root
+    group: root
+    mode: '0644'
+  vars:
+    report_date: "{{ ansible_date_time.iso8601 }}"
+    hostname: "{{ inventory_hostname }}"
+    disk_usage_content: "{{ disk_usage.stdout }}"
+    memory_content: "{{ memory_info.stdout }}"
+    block_content: "{{ block_info.stdout }}"
+
+- name: Copiar reportes al nodo de control
+  ansible.builtin.fetch:
+    src: "{{ audit_report_path }}/{{ item }}"
+    dest: "./reports/{{ inventory_hostname }}/"
+    flat: yes
+  loop:
+    - df.txt
+    - lsblk.txt
+    - free.txt
+    - failed_services.txt
+    - last.txt
+    - "system_audit_{{ ansible_date_time.date }}.txt"

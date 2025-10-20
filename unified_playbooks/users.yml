@@ -1,0 +1,25 @@
+---
+# Playbook de usuarios unificado
+# Funciona tanto para Linux como Windows
+
+- name: "👥 GESTIÓN DE USUARIOS"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: "📋 Información de gestión de usuarios"
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          👥 GESTIÓN DE USUARIOS
+          ============================================
+          Plataforma: {{ ansible_facts['os_family'] }}
+          Configurando usuarios para: {{ inventory_hostname }}
+          ============================================
+  
+  roles:
+    - role: users
+      tags:
+        - users
+        - security

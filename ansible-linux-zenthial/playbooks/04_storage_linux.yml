@@ -1,6 +1,0 @@
----
-- name: Configuración de almacenamiento en Linux
-  hosts: linux_lab
-  become: yes
-  roles:
-    - storage_linux

@@ -1,0 +1,12 @@
+---
+# Handlers para servicios
+
+- name: restart_cron
+  ansible.builtin.service:
+    name: cron
+    state: restarted
+
+- name: restart_winrm
+  ansible.windows.win_service:
+    name: WinRM
+    state: restarted

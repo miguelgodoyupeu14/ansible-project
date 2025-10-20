@@ -1,0 +1,8 @@
+---
+# Defaults para auditoría
+
+# Ruta de reportes
+audit_report_path: "/var/log/audit_ansible"
+
+# Reportes Windows
+windows_report_path: "C:\\AnsibleReports"

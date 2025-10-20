@@ -1,0 +1,129 @@
+---
+# Tareas para servicios críticos - Versión corregida
+
+- name: Obtener información de servicios del sistema
+  ansible.builtin.service_facts:
+
+- name: Crear directorio para reportes de servicios
+  ansible.builtin.file:
+    path: "{{ audit_report_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Asegurar que cron esté activo (Debian/Ubuntu)
+  ansible.builtin.service:
+    name: cron
+    state: started
+    enabled: yes
+  when: 
+    - ansible_facts['os_family'] == "Debian"
+    - "'cron.service' in ansible_facts.services or 'cron' in ansible_facts.services"
+
+- name: Asegurar que crond esté activo (RHEL/CentOS)
+  ansible.builtin.service:
+    name: crond
+    state: started
+    enabled: yes
+  when: 
+    - ansible_facts['os_family'] == "RedHat"
+    - "'crond.service' in ansible_facts.services or 'crond' in ansible_facts.services"
+
+- name: Verificar servicios de tiempo disponibles
+  ansible.builtin.debug:
+    msg: |
+      Servicios de tiempo detectados:
+      {% for service_name in ansible_facts.services.keys() %}
+      {% if 'ntp' in service_name or 'chrony' in service_name or 'timesyncd' in service_name %}
+      - {{ service_name }}: {{ ansible_facts.services[service_name].state }}
+      {% endif %}
+      {% endfor %}
+
+- name: Asegurar servicio de tiempo (ntp)
+  ansible.builtin.service:
+    name: ntp
+    state: started
+    enabled: yes
+  when: 
+    - "'ntp.service' in ansible_facts.services"
+    - ansible_facts.services['ntp.service'].status != 'not-found'
+
+- name: Asegurar servicio de tiempo (chrony)
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: yes
+  when: 
+    - "'chronyd.service' in ansible_facts.services"
+    - ansible_facts.services['chronyd.service'].status != 'not-found'
+
+- name: Asegurar servicio de tiempo (systemd-timesyncd)
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    state: started
+    enabled: yes
+  when: 
+    - "'systemd-timesyncd.service' in ansible_facts.services"
+    - ansible_facts.services['systemd-timesyncd.service'].status != 'not-found'
+    - "'ntp.service' not in ansible_facts.services or ansible_facts.services['ntp.service'].status == 'not-found'"
+    - "'chronyd.service' not in ansible_facts.services or ansible_facts.services['chronyd.service'].status == 'not-found'"
+
+- name: Obtener procesos críticos usando módulos nativos
+  ansible.builtin.command: pgrep -f "{{ item }}"
+  register: critical_processes
+  failed_when: false
+  changed_when: false
+  loop:
+    - sshd
+    - cron
+    - systemd
+
+- name: Crear reporte de servicios críticos
+  ansible.builtin.copy:
+    content: |
+      Reporte de Servicios Críticos - {{ inventory_hostname }}
+      Generado: {{ ansible_date_time.iso8601 }}
+      
+      SERVICIOS SSH:
+      {% for service_name, service_info in ansible_facts.services.items() %}
+      {% if 'ssh' in service_name %}
+      - {{ service_name }}: {{ service_info.state }} ({{ service_info.status | default('N/A') }})
+      {% endif %}
+      {% endfor %}
+      
+      SERVICIOS CRON:
+      {% for service_name, service_info in ansible_facts.services.items() %}
+      {% if 'cron' in service_name %}
+      - {{ service_name }}: {{ service_info.state }} ({{ service_info.status | default('N/A') }})
+      {% endif %}
+      {% endfor %}
+      
+      SERVICIOS DE TIEMPO:
+      {% for service_name, service_info in ansible_facts.services.items() %}
+      {% if 'ntp' in service_name or 'chrony' in service_name or 'timesyncd' in service_name %}
+      - {{ service_name }}: {{ service_info.state }} ({{ service_info.status | default('N/A') }})
+      {% endif %}
+      {% endfor %}
+      
+      PROCESOS CRÍTICOS ENCONTRADOS:
+      {% for result in critical_processes.results %}
+      {% if result.rc == 0 %}
+      - {{ result.item }}: {{ result.stdout_lines | length }} procesos
+      {% endif %}
+      {% endfor %}
+    dest: "{{ audit_report_path }}/services_status.txt"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Notificar sobre servicios críticos faltantes
+  ansible.builtin.debug:
+    msg: |
+      ⚠️ ATENCIÓN: No se encontraron servicios de tiempo estándar.
+      Servicios de tiempo buscados: ntp, chronyd, systemd-timesyncd
+      Considera instalar uno de estos servicios para sincronización de tiempo.
+  when: 
+    - "'ntp.service' not in ansible_facts.services or ansible_facts.services['ntp.service'].status == 'not-found'"
+    - "'chronyd.service' not in ansible_facts.services or ansible_facts.services['chronyd.service'].status == 'not-found'"  
+    - "'systemd-timesyncd.service' not in ansible_facts.services or ansible_facts.services['systemd-timesyncd.service'].status == 'not-found'"

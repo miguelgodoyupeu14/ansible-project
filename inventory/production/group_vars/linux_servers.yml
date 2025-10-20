@@ -1,0 +1,39 @@
+---
+# Variables específicas para servidores Linux
+
+packages_common:
+  - vim
+  - git
+  - curl
+  - htop
+  - lsb-release
+
+# Configuración de auditoría
+audit_report_path: "/var/log/audit_ansible"
+
+# Usuarios administradores
+admin_users:
+  - miguelgod
+
+# Llaves SSH autorizadas
+ssh_authorized_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOA4D82y0PUmBhy8fQoiFjCQLIqPytjS5hfHGDLrpFFk miguel@admin"
+
+# Variables para storage
+mount_points:
+  - device: "/dev/sdb1"
+    path: "/data" 
+    fstype: "ext4"
+
+# Variables para Windows (si usas usuarios Windows) - ahora desde vault
+backup_user_password: "{{ vault_backup_user_password }}"
+
+# Configuración Gaming Center
+gaming_enabled: true
+gaming_server_name: "Zentyal Gaming Center"
+gaming_admin_email: "admin@zentyal-gaming.local"
+
+# Configuración adicional para Steam
+steam_auto_update: true
+gaming_backup_enabled: true
+gaming_monitoring_enabled: true

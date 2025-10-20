@@ -1,6 +1,0 @@
----
-- name: Auditoría y recolección de información en Windows Server 2022
-  hosts: windows_lab
-  gather_facts: no
-  roles:
-    - audit_windows

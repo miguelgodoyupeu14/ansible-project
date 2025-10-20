@@ -1,4 +1,0 @@
-ansible_winrm_port: 5985
-win_admin_user: Administrador
-default_scripts_path: 'C:\Scripts'
-vault_file: vault.yml  # Referencia al archivo de variables protegidas

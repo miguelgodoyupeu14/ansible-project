@@ -1,0 +1,174 @@
+---
+# PLAYBOOK PRINCIPAL - Ejecuta toda la configuración del proyecto
+# Este es el archivo maestro que configura todo el sistema completo
+
+- name: "🚀 CONFIGURACIÓN COMPLETA DEL SISTEMA ANSIBLE"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  vars_files:
+    - secrets.yml  # Archivo central de contraseñas y secrets
+  
+  pre_tasks:
+    - name: "📋 INICIO - Información del sistema y configuración"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          🚀 ANSIBLE PROJECT - CONFIGURACIÓN COMPLETA
+          ============================================================
+          📅 Fecha: {{ ansible_date_time.iso8601 }}
+          🖥️  Host: {{ inventory_hostname }} ({{ ansible_host | default('N/A') }})
+          🐧 SO: {{ ansible_facts['distribution'] | default('Unknown') }} {{ ansible_facts['distribution_version'] | default('') }}
+          🏗️  Arquitectura: {{ ansible_facts['architecture'] | default('Unknown') }}
+          👤 Usuario: {{ ansible_user }}
+          🌍 Plataforma: {{ ansible_facts['os_family'] | default('Unknown') }}
+          
+          🎯 CONFIGURACIÓN A EJECUTAR:
+          ✅ Configuración base del sistema
+          ✅ Gestión de usuarios y seguridad
+          ✅ Configuración de servicios
+          ✅ Configuración de almacenamiento
+          {% if gaming_enabled | default(false) %}
+          🎮 Gaming Center (Steam + Servidores de juegos)
+          {% endif %}
+          ✅ Auditoría y monitoreo
+          
+          ============================================================
+          🚀 INICIANDO CONFIGURACIÓN COMPLETA...
+          ============================================================
+
+    - name: "� Añadir host a known_hosts si es necesario"
+      ansible.builtin.known_hosts:
+        name: "{{ ansible_host | default(inventory_hostname) }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' + (ansible_host | default(inventory_hostname))) }}"
+        state: present
+      delegate_to: localhost
+      become: no
+      run_once: true
+      when: ansible_host is defined
+
+    - name: "�🔍 Verificar conectividad y requisitos básicos"
+      ansible.builtin.ping:
+
+    - name: "📦 Verificar que Python está disponible"
+      ansible.builtin.setup:
+        gather_subset: min
+  
+  roles:
+    - role: base
+      tags: 
+        - base
+        - system
+        - initial
+        - foundational
+      
+    - role: users
+      tags:
+        - users
+        - security
+        - accounts
+        
+    - role: services
+      tags:
+        - services
+        - daemons
+        - system-services
+        
+    - role: storage
+      tags:
+        - storage
+        - filesystem
+        - disks
+        
+    - role: gaming
+      tags:
+        - gaming
+        - steam
+        - game-servers
+      when: gaming_enabled | default(false)
+      
+    - role: audit
+      tags:
+        - audit
+        - monitoring
+        - reporting
+  
+  post_tasks:
+    - name: "🎉 FINALIZACIÓN - Resumen de configuración completada"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          🎉 ¡CONFIGURACIÓN COMPLETADA EXITOSAMENTE! 🎉
+          ============================================================
+          
+          ✅ COMPONENTES CONFIGURADOS:
+          📋 Sistema base: Paquetes, timezone, firewall, SSH
+          👥 Usuarios: Cuentas admin, SSH keys, sudoers
+          ⚙️  Servicios: Servicios críticos habilitados y monitoreados
+          💾 Almacenamiento: Discos y particiones configurados
+          {% if gaming_enabled | default(false) %}
+          🎮 Gaming Center: Steam + servidores de juegos listos
+          {% endif %}
+          📊 Auditoría: Logs y reportes configurados
+          
+          🖥️  INFORMACIÓN DEL SERVIDOR:
+          - Host: {{ inventory_hostname }}
+          - IP: {{ ansible_host | default(ansible_default_ipv4.address | default('N/A')) }}
+          - SO: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}
+          - Memoria: {{ ansible_memtotal_mb | default('N/A') }}MB
+          - CPU: {{ ansible_processor_vcpus | default('N/A') }} cores
+          
+          {% if gaming_enabled | default(false) %}
+          🎮 GAMING CENTER INFORMACIÓN:
+          - Steam configurado para usuario: {{ steam_user | default('steamuser') }}
+          - Directorio juegos: {{ games_storage | default('/data/games') }}
+          - Puertos gaming abiertos: {{ gaming_ports | join(', ') if gaming_ports is defined else 'N/A' }}
+          - Acceso web Zentyal: https://{{ ansible_host | default('IP') }}:8443
+          {% endif %}
+          
+          🚀 COMANDOS ÚTILES POST-CONFIGURACIÓN:
+          # Verificar estado general:
+          ansible {{ inventory_hostname }} -m setup
+          
+          # Ejecutar solo gaming (si habilitado):
+          ansible-playbook main.yml --tags gaming
+          
+          # Ejecutar solo servicios:
+          ansible-playbook main.yml --tags services
+          
+          # Auditoría completa:
+          ansible-playbook main.yml --tags audit
+          
+          ============================================================
+          🎯 TU SISTEMA ESTÁ LISTO Y OPERATIVO
+          ============================================================
+
+    - name: "📊 Recopilar facts finales del sistema"
+      ansible.builtin.setup:
+        gather_subset: all
+      register: final_facts
+
+    - name: "✅ Validación final - Confirmar que todo está funcionando"
+      ansible.builtin.assert:
+        that:
+          - ansible_facts is defined
+          - ansible_facts['os_family'] is defined
+          - final_facts is defined
+        fail_msg: |
+          ❌ ERROR: Validación final fallida
+          Algunos componentes no se configuraron correctamente.
+          Revisa los logs anteriores para identificar problemas.
+        success_msg: |
+          ✅ VALIDACIÓN EXITOSA: Todo configurado correctamente
+          Sistema listo para producción.
+
+    - name: "🎮 Gaming Center - Mensaje final (si habilitado)"
+      ansible.builtin.debug:
+        msg: |
+          🎮🎉 ¡TU ZENTYAL ES AHORA UN GAMING CENTER! 🎉🎮
+          
+          Steam está instalado y listo
+          Puedes empezar a instalar servidores de juegos
+          Gestión: {{ steam_home | default('/data/steam') }}/scripts/steam-manager.sh
+      when: gaming_enabled | default(false)

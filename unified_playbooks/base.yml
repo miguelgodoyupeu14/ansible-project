@@ -1,0 +1,29 @@
+---
+# Playbook base unificado para configuración inicial
+# Funciona tanto para Linux como Windows
+
+- name: "🔧 CONFIGURACIÓN BASE DEL SISTEMA"
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: "📋 Mostrar información del sistema"
+      ansible.builtin.debug:
+        msg: |
+          ============================================
+          🖥️  CONFIGURACIÓN BASE MULTI-PLATAFORMA
+          ============================================
+          Host: {{ inventory_hostname }}
+          OS Family: {{ ansible_facts['os_family'] }}
+          OS: {{ ansible_facts['distribution'] | default('Windows') }} {{ ansible_facts['distribution_version'] | default('') }}
+          Arquitectura: {{ ansible_facts['architecture'] }}
+          Usuario Ansible: {{ ansible_user }}
+          ============================================
+  
+  roles:
+    - role: base
+      tags:
+        - base
+        - initial
+        - system

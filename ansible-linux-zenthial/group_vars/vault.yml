@@ -1,5 +1,0 @@
-# Este archivo debe protegerse con Ansible Vault.
-# Ejemplo: ansible-vault create group_vars/vault.yml
-
-ssh_private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\n..."
-api_token: "CAMBIAR_POR_TOKEN_SEGURA"

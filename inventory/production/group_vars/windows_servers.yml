@@ -1,0 +1,14 @@
+---
+# Variables específicas para servidores Windows
+
+# Configuración Windows
+win_admin_user: "Administrator"
+default_scripts_path: "C:\\Scripts"
+
+# Servicios Windows comunes
+windows_services:
+  - "Windows Update"
+  - "Windows Defender Antivirus Service"
+
+# Configuración de zona horaria Windows
+windows_timezone: "South America Standard Time"

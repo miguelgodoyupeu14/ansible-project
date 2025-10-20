@@ -1,7 +1,0 @@
----
-# Handlers para base_windows
-
-- name: Reiniciar servidor
-  ansible.windows.win_reboot:
-    msg: "Reinicio requerido por cambios críticos"
-    timeout: 600

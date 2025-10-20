@@ -1,0 +1,13 @@
+---
+# Defaults para servicios
+
+# Servicios críticos Linux
+critical_services:
+  - ssh
+  - cron
+  - ntp
+
+# Servicios críticos Windows
+critical_windows_services:
+  - WinRM
+  - w32time

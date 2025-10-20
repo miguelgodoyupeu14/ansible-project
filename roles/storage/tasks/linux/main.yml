@@ -1,0 +1,99 @@
+---
+# Tareas de almacenamiento
+
+- name: Detectar discos y particiones
+  ansible.builtin.setup:
+    gather_subset:
+      - hardware
+      - network
+      - virtual
+  register: hw_facts
+
+- name: Mostrar información de discos
+  debug:
+    var: hw_facts
+
+- name: VALIDACIÓN DE SEGURIDAD - Verificar que el dispositivo es seguro para formatear
+  ansible.builtin.assert:
+    that:
+      - mount_points is defined
+      - mount_points | length > 0
+      - mount_points[0].device is defined
+      - mount_points[0].device.startswith('/dev/sd')
+      - not mount_points[0].device.endswith('a1')  # No formatear sda1 (sistema)
+      - not mount_points[0].device.endswith('a')   # No formatear sda (disco sistema)
+    fail_msg: |
+      ❌ PELIGRO: No es seguro formatear {{ mount_points[0].device | default('undefined') }}
+      
+      VERIFICACIONES DE SEGURIDAD FALLIDAS:
+      - El dispositivo debe empezar con /dev/sd
+      - No debe ser sda o sda1 (disco del sistema)
+      - Dispositivo actual: {{ mount_points[0].device | default('undefined') }}
+      
+      Para bypass (SOLO EN ENTORNO DE PRUEBAS):
+      ansible-playbook main.yml --tags storage -e force_format=true
+    success_msg: "✅ Dispositivo {{ mount_points[0].device }} es seguro para formatear"
+
+- name: Verificar si el dispositivo ya tiene filesystem
+  ansible.builtin.command: "blkid {{ mount_points[0].device }}"
+  register: blkid_result
+  failed_when: false
+  changed_when: false
+  when: mount_points is defined and mount_points | length > 0
+
+- name: ADVERTENCIA - El dispositivo ya tiene filesystem
+  ansible.builtin.debug:
+    msg: |
+      ⚠️ ADVERTENCIA: {{ mount_points[0].device }} ya tiene un filesystem:
+      {{ blkid_result.stdout }}
+      
+      Si continúas, se PERDERÁN TODOS LOS DATOS.
+      Para forzar el formateo: -e force_format=true
+  when: 
+    - blkid_result.rc == 0
+    - force_format is not defined or not force_format
+
+- name: Detener ejecución si hay filesystem y no se fuerza
+  ansible.builtin.fail:
+    msg: |
+      ❌ DETENIDO POR SEGURIDAD: El dispositivo {{ mount_points[0].device }} ya contiene datos.
+      Para continuar (PELIGRO - BORRA DATOS): ansible-playbook main.yml -e force_format=true
+  when: 
+    - blkid_result.rc == 0
+    - force_format is not defined or not force_format
+
+- name: Crear filesystem SOLO si no existe o se fuerza (CON VALIDACIONES)
+  ansible.builtin.filesystem:
+    dev: "{{ mount_points[0].device }}"
+    fstype: "{{ mount_points[0].fstype }}"
+    force: "{{ force_format | default(false) }}"
+  when: 
+    - mount_points is defined and mount_points | length > 0
+    - mount_points[0].device is defined
+    - ansible_check_mode == false  # No ejecutar en modo check
+    - blkid_result.rc != 0 or (force_format is defined and force_format)
+
+- name: Montar en /data y asegurar persistencia con cuotas
+  ansible.builtin.mount:
+    path: "{{ mount_points[0].path }}"
+    src: "{{ mount_points[0].device }}"
+    fstype: "{{ mount_points[0].fstype }}"
+    opts: "defaults,usrquota,grpquota"
+    state: mounted
+    backup: yes
+  when: mount_points is defined and mount_points | length > 0
+
+- name: Configurar cuotas de disco
+  ansible.builtin.package:
+    name: quota
+    state: present
+
+- name: Crear archivos de cuotas
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - "quotacheck -cum {{ mount_points[0].path }}"
+    - "quotaon {{ mount_points[0].path }}"
+  when: 
+    - mount_points is defined and mount_points | length > 0
+    - mount_points[0].path is defined
+  ignore_errors: yes
