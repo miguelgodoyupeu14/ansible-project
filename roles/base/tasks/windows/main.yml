@@ -34,8 +34,8 @@
     - cleanup.ps1
 
 - name: Configurar zona horaria
-  ansible.windows.win_timezone:
-    timezone: "South America Standard Time"  # Cambia según tu región
+  community.windows.win_timezone:
+    timezone: "SA Pacific Standard Time"  # Perú, Colombia, Ecuador (UTC-5)
 
 - name: Cambiar nombre de host si es necesario
   ansible.windows.win_hostname:

@@ -1,21 +1,39 @@
 ---
 # Tareas para usuarios locales
 
-- name: Crear usuario local backupuser
+- name: Crear usuario local backupuser con grupos incluidos
   ansible.windows.win_user:
     name: backupuser
     password: "{{ backup_user_password }}"
     state: present
+    description: "Usuario de backup automatizado"
+    password_never_expires: true
+    user_cannot_change_password: false
+    account_disabled: false
     groups:
-      - Backup Operators
+      - "Operadores de copia de seguridad"
+      - "Administradores"
 
-- name: Añadir backupuser a Administradores
-  ansible.windows.win_group_membership:
-    name: Administradores
-    members:
-      - backupuser
-    state: present
+- name: Esperar unos segundos para propagación del usuario
+  ansible.windows.win_shell: Start-Sleep 3
 
 - name: Configurar políticas de contraseña básicas
   ansible.windows.win_shell: 'net accounts /minpwlen:8 /maxpwage:90 /uniquepw:5'
   register: pw_policy
+
+- name: Mostrar resultado de políticas de contraseña
+  ansible.builtin.debug:
+    var: pw_policy.stdout_lines
+  when: pw_policy.stdout_lines is defined
+
+- name: Verificar que el usuario backupuser tiene los permisos correctos
+  ansible.windows.win_shell: |
+    $user = Get-LocalUser -Name "backupuser"
+    $groups = Get-LocalGroup | Where-Object { (Get-LocalGroupMember -Group $_.Name | Where-Object Name -like "*backupuser*") }
+    $groups | Select-Object Name
+  register: user_groups
+
+- name: Mostrar grupos del usuario backupuser
+  ansible.builtin.debug:
+    msg: "Usuario backupuser pertenece a los grupos: {{ user_groups.stdout_lines }}"
+  when: user_groups.stdout_lines is defined

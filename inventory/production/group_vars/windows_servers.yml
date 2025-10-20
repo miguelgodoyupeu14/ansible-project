@@ -1,14 +1,41 @@
 ---
 # Variables específicas para servidores Windows
+# Windows Server: 192.168.164.133 - Laboratorio Académico
 
-# Configuración Windows
-win_admin_user: "Administrator"
+# Configuración Windows Server
+win_admin_user: "Administrador"
 default_scripts_path: "C:\\Scripts"
+lab_vms_path: "C:\\VMs"
+lab_domain: "academia.local"
 
-# Servicios Windows comunes
+# Servicios Windows para laboratorio académico
 windows_services:
   - "Windows Update"
   - "Windows Defender Antivirus Service"
+  - "Active Directory Domain Services"
+  - "DHCP Server"
+  - "DNS Server"
+  - "Hyper-V Virtual Machine Management"
+
+# Configuración académica
+academic_lab_enabled: true
+vm_management_enabled: true
+domain_controller_enabled: true
 
 # Configuración de zona horaria Windows
-windows_timezone: "South America Standard Time"
+windows_timezone: "SA Pacific Standard Time"
+
+# Configuración de red para laboratorio
+dhcp_scope_start: "192.168.164.100"
+dhcp_scope_end: "192.168.164.200"
+dns_forwarders:
+  - "8.8.8.8"
+  - "1.1.1.1"
+
+# Gaming Center integration
+gaming_server_ip: "192.168.164.130"
+gaming_ports_allow:
+  - 25565  # Minecraft Java
+  - 19132  # Minecraft Bedrock
+  - 2456   # Valheim
+  - 27015  # Steam

@@ -17,14 +17,16 @@
   ansible.windows.win_shell: 'Get-Process | Where-Object {$_.Name -eq "svchost"}'
   register: process_status
 
+- name: Debug - Mostrar contenido de process_status
+  ansible.builtin.debug:
+    var: process_status
+
+- name: Crear directorio de reportes si no existe
+  ansible.windows.win_file:
+    path: "C:\\AnsibleReports\\{{ inventory_hostname }}"
+    state: directory
+
 - name: Guardar salida de procesos críticos
   ansible.windows.win_copy:
-    content: "{{ process_status.stdout }}"
+    content: "{{ process_status.stdout | default('No stdout available') }}"
     dest: "C:\\AnsibleReports\\{{ inventory_hostname }}\\process_status.txt"
-
-# Handler para reiniciar servicios si cambian archivos de configuración
-- name: Reiniciar servicio WinRM
-  ansible.windows.win_service:
-    name: WinRM
-    state: restarted
-  listen: restart_winrm

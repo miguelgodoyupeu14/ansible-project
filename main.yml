@@ -4,7 +4,7 @@
 
 - name: "🚀 CONFIGURACIÓN COMPLETA DEL SISTEMA ANSIBLE"
   hosts: all
-  become: yes
+  become: no
   gather_facts: yes
   
   vars_files:
@@ -38,7 +38,7 @@
           🚀 INICIANDO CONFIGURACIÓN COMPLETA...
           ============================================================
 
-    - name: "� Añadir host a known_hosts si es necesario"
+    - name: "🔑 Añadir host a known_hosts si es necesario"
       ansible.builtin.known_hosts:
         name: "{{ ansible_host | default(inventory_hostname) }}"
         key: "{{ lookup('pipe', 'ssh-keyscan -H ' + (ansible_host | default(inventory_hostname))) }}"
@@ -46,14 +46,22 @@
       delegate_to: localhost
       become: no
       run_once: true
-      when: ansible_host is defined
+      when: 
+        - ansible_host is defined
+        - ansible_facts['os_family'] != 'Windows'
 
-    - name: "�🔍 Verificar conectividad y requisitos básicos"
+    - name: " Verificar conectividad Linux"
       ansible.builtin.ping:
+      when: ansible_facts['os_family'] != 'Windows'
 
-    - name: "📦 Verificar que Python está disponible"
+    - name: "🔍 Verificar conectividad Windows"
+      ansible.windows.win_ping:
+      when: ansible_facts['os_family'] == 'Windows'
+
+    - name: "📦 Verificar que Python está disponible (Linux)"
       ansible.builtin.setup:
         gather_subset: min
+      when: ansible_facts['os_family'] != 'Windows'
   
   roles:
     - role: base
