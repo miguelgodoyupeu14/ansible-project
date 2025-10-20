@@ -18,14 +18,14 @@
   when: disk_info.ansible_facts.ansible_disks | length > 1
   # ¡ADVERTENCIA! Esta tarea borra datos. Usar solo en pruebas.
 
-- name: Crear carpeta D:\data
+- name: Crear carpeta C:\data
   ansible.windows.win_file:
-    path: 'D:\data'
+    path: 'C:\data'
     state: directory
 
-- name: Asignar permisos NTFS a D:\data
+- name: Asignar permisos NTFS a C:\data
   ansible.windows.win_acl:
-    path: 'D:\data'
+    path: 'C:\data'
     user: '{{ win_admin_user }}'
     rights: FullControl
     type: allow
