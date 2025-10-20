@@ -230,6 +230,19 @@ ansible-playbook main.yml -vvv --ask-vault-pass
 
 ---
 
+## 🛡️ Recomendaciones de Buenas Prácticas y Endurecimiento
+
+1. **WinRM en Windows**: Para producción, configura WinRM sobre HTTPS y valida los certificados. Evita AllowUnencrypted y BasicAuth en entornos reales.
+2. **Sudoers y NOPASSWD**: Limita el uso de NOPASSWD solo a comandos y usuarios estrictamente necesarios. No uses NOPASSWD:ALL.
+3. **Gestión de Secrets**: Usa siempre Ansible Vault para cualquier dato sensible. Nunca almacenes contraseñas en texto plano.
+4. **Handlers y Notificaciones**: Separa handlers y usa notify para reinicios y cambios de estado.
+5. **Idempotencia**: Todos los roles y tareas deben ser idempotentes (no causar cambios innecesarios si ya están aplicados).
+6. **Firewall y Seguridad**: Configura firewalld/ufw automáticamente y revisa puertos abiertos.
+7. **Auditoría**: Mantén logs y reportes de auditoría para cambios críticos.
+8. **Documentación**: Mantén este README y los archivos de guía actualizados con las mejores prácticas.
+
+---
+
 ✅ **Estructura validada y probada**
 🎮 **Gaming Center funcional**  
 📁 **Sin redundancias**  
